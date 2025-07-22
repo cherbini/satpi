@@ -1,0 +1,11 @@
+[Unit]
+Description=Run SatPi Dynamic DNS Update every 15 minutes
+Requires=dynamic-dns.service
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=15min
+Unit=dynamic-dns.service
+
+[Install]
+WantedBy=timers.target

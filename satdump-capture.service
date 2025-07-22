@@ -1,0 +1,25 @@
+[Unit]
+Description=SatPi Satellite Data Capture Service
+After=network-online.target wifi-hunter.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/home/pi/satpi/satdump-capture.sh auto
+Restart=always
+RestartSec=30
+User=pi
+Group=pi
+StandardOutput=journal
+StandardError=journal
+
+# Environment
+Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+Environment=HOME=/home/pi
+
+# Resource limits
+MemoryLimit=512M
+CPUQuota=80%
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,28 @@
+# Raspberry Pi 3 ARMhf SatDump Configuration
+# Optimized for satellite reception and WiFi connectivity
+
+# GPU/CPU settings
+gpu_mem=64
+arm_freq=1200
+core_freq=450
+sdram_freq=450
+over_voltage=2
+
+# Enable hardware interfaces
+dtparam=spi=on
+dtparam=i2c_arm=on
+enable_uart=1
+
+# USB settings for RTL-SDR
+max_usb_current=1
+dwc_otg.speed=1
+
+# GPIO settings
+gpio=18=op,dh  # Antenna control
+gpio=19=op,dl  # Status LED
+
+# Audio (disable to save resources)
+dtparam=audio=off
+
+# Network optimization
+dtoverlay=disable-wifi-power-save

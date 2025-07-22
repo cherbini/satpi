@@ -1,0 +1,18 @@
+[Unit]
+Description=SatPi Dynamic DNS Update Service
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/home/pi/satpi/dynamic-dns.sh
+User=pi
+Group=pi
+StandardOutput=journal
+StandardError=journal
+
+# Environment
+Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,19 @@
+[Unit]
+Description=SatPi Network Monitor Service
+After=wifi-hunter.service
+Wants=network.target
+
+[Service]
+Type=simple
+ExecStart=/home/pi/satpi/network-monitor.sh
+Restart=always
+RestartSec=30
+User=root
+StandardOutput=journal
+StandardError=journal
+
+# Environment
+Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+[Install]
+WantedBy=multi-user.target
