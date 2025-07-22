@@ -93,12 +93,26 @@ network={
 }
 ```
 
-### Upload Settings
-Modify `data-uploader.py` to change:
-- Upload URL
-- API credentials
-- File size limits
-- Retry settings
+### Custom Server Setup
+Configure your own server instead of boatwizards.com:
+
+```bash
+# Interactive configuration
+sudo /home/pi/satpi/configure-server.sh
+
+# Edit configuration file directly
+nano /home/pi/satpi/server-config.json
+```
+
+See [SERVER_SETUP.md](SERVER_SETUP.md) for detailed instructions.
+
+### Environment Variables
+Override settings with environment variables:
+```bash
+export SATPI_UPLOAD_URL="https://your-server.com/api"
+export SATPI_API_KEY="your-api-key" 
+export SATPI_NOTIFICATION_EMAIL="your-email@example.com"
+```
 
 ## Monitoring
 

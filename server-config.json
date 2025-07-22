@@ -1,0 +1,24 @@
+{
+  "upload_server": {
+    "base_url": "https://boatwizards.com/satellite",
+    "upload_endpoint": "/upload",
+    "status_endpoint": "/status",
+    "location_endpoint": "/location",
+    "api_key": "satpi-client",
+    "timeout": 300,
+    "max_file_size_mb": 100,
+    "retry_attempts": 5,
+    "retry_delay_seconds": 300
+  },
+  "notification": {
+    "email": "johncherbini@hotmail.com",
+    "device_name": "SatPi Device",
+    "report_frequency_hours": 24
+  },
+  "system": {
+    "data_directory": "/home/pi/sat-data",
+    "log_directory": "/var/log",
+    "cleanup_after_upload": true,
+    "max_local_storage_gb": 10
+  }
+}

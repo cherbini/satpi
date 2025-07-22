@@ -15,15 +15,30 @@ from pathlib import Path
 from datetime import datetime
 import subprocess
 
-# Configuration
-UPLOAD_URL = "https://boatwizards.com/satellite/upload"
-API_KEY = "satpi-client"  # Should be configured per device
+# Default configuration - can be overridden by config file or environment
+DEFAULT_CONFIG = {
+    "upload_server": {
+        "base_url": "https://boatwizards.com/satellite",
+        "upload_endpoint": "/upload",
+        "status_endpoint": "/status",
+        "api_key": "satpi-client",
+        "timeout": 300,
+        "max_file_size_mb": 100,
+        "retry_attempts": 5,
+        "retry_delay_seconds": 300
+    },
+    "notification": {
+        "email": "johncherbini@hotmail.com"
+    },
+    "system": {
+        "data_directory": "/home/pi/sat-data",
+        "cleanup_after_upload": True
+    }
+}
+
+CONFIG_FILE = "/home/pi/satpi/server-config.json"
 UPLOAD_QUEUE = "/tmp/upload-queue"
-DATA_DIR = "/home/pi/sat-data"
 LOG_FILE = "/var/log/data-uploader.log"
-MAX_FILE_SIZE = 100 * 1024 * 1024  # 100MB
-RETRY_DELAY = 300  # 5 minutes
-MAX_RETRIES = 5
 
 # Set up logging
 logging.basicConfig(
@@ -38,12 +53,64 @@ logger = logging.getLogger(__name__)
 
 class SatelliteDataUploader:
     def __init__(self):
+        self.config = self.load_config()
         self.session = requests.Session()
         self.session.headers.update({
             'User-Agent': 'SatPi-Uploader/1.0',
-            'X-API-Key': API_KEY
+            'X-API-Key': self.config["upload_server"]["api_key"]
         })
         self.device_id = self.get_device_id()
+        
+        # Set up URLs from config
+        self.upload_url = self.config["upload_server"]["base_url"] + self.config["upload_server"]["upload_endpoint"]
+        self.status_url = self.config["upload_server"]["base_url"] + self.config["upload_server"]["status_endpoint"]
+        self.max_file_size = self.config["upload_server"]["max_file_size_mb"] * 1024 * 1024
+        self.timeout = self.config["upload_server"]["timeout"]
+        self.retry_delay = self.config["upload_server"]["retry_delay_seconds"]
+        self.max_retries = self.config["upload_server"]["retry_attempts"]
+        self.data_dir = self.config["system"]["data_directory"]
+        
+    def load_config(self):
+        """Load configuration from file or environment, with defaults"""
+        config = DEFAULT_CONFIG.copy()
+        
+        # Try to load from config file
+        try:
+            if os.path.exists(CONFIG_FILE):
+                with open(CONFIG_FILE, 'r') as f:
+                    file_config = json.load(f)
+                
+                # Deep merge configuration
+                for section, settings in file_config.items():
+                    if section in config:
+                        config[section].update(settings)
+                    else:
+                        config[section] = settings
+                logger.info(f"Loaded configuration from {CONFIG_FILE}")
+        except Exception as e:
+            logger.warning(f"Could not load config file {CONFIG_FILE}: {e}")
+        
+        # Override with environment variables if set
+        env_base_url = os.environ.get('SATPI_UPLOAD_URL')
+        if env_base_url:
+            # Parse full URL or just base
+            if '/upload' in env_base_url:
+                config["upload_server"]["base_url"] = env_base_url.replace('/upload', '')
+            else:
+                config["upload_server"]["base_url"] = env_base_url
+            logger.info(f"Using upload URL from environment: {env_base_url}")
+        
+        env_api_key = os.environ.get('SATPI_API_KEY')
+        if env_api_key:
+            config["upload_server"]["api_key"] = env_api_key
+            logger.info("Using API key from environment")
+        
+        env_email = os.environ.get('SATPI_NOTIFICATION_EMAIL')
+        if env_email:
+            config["notification"]["email"] = env_email
+            logger.info(f"Using notification email from environment: {env_email}")
+        
+        return config
         
     def get_device_id(self):
         """Generate unique device ID based on Raspberry Pi serial"""
@@ -145,7 +212,7 @@ class SatelliteDataUploader:
         """Upload file to server"""
         try:
             # Check file size
-            if metadata["file_size"] > MAX_FILE_SIZE:
+            if metadata["file_size"] > self.max_file_size:
                 logger.warning(f"File too large: {filepath} ({metadata['file_size']} bytes)")
                 return False
 
@@ -154,12 +221,12 @@ class SatelliteDataUploader:
                 'metadata': ('metadata.json', json.dumps(metadata), 'application/json')
             }
             
-            logger.info(f"Uploading {filepath} ({metadata['file_size']} bytes)")
+            logger.info(f"Uploading {filepath} ({metadata['file_size']} bytes) to {self.upload_url}")
             
             response = self.session.post(
-                UPLOAD_URL,
+                self.upload_url,
                 files=files,
-                timeout=300  # 5 minute timeout
+                timeout=self.timeout
             )
             
             files['file'][1].close()  # Close file handle
@@ -216,12 +283,13 @@ class SatelliteDataUploader:
                     
                     if self.upload_file(filepath, metadata):
                         logger.info(f"Successfully uploaded {filepath}")
-                        # Optionally delete local file after successful upload
-                        try:
-                            os.remove(filepath)
-                            logger.info(f"Deleted local file: {filepath}")
-                        except Exception as e:
-                            logger.warning(f"Could not delete {filepath}: {e}")
+                        # Delete local file after successful upload if configured
+                        if self.config["system"].get("cleanup_after_upload", True):
+                            try:
+                                os.remove(filepath)
+                                logger.info(f"Deleted local file: {filepath}")
+                            except Exception as e:
+                                logger.warning(f"Could not delete {filepath}: {e}")
                     else:
                         logger.error(f"Failed to upload {filepath}")
                         remaining_lines.append(line)
@@ -241,8 +309,7 @@ class SatelliteDataUploader:
         """Test connection to upload server"""
         try:
             # Test endpoint
-            test_url = "https://boatwizards.com/satellite/status"
-            response = self.session.get(test_url, timeout=10)
+            response = self.session.get(self.status_url, timeout=10)
             
             if response.status_code == 200:
                 logger.info("Connection to upload server: OK")
@@ -268,7 +335,7 @@ class SatelliteDataUploader:
                 break
             except Exception as e:
                 logger.error(f"Daemon error: {e}")
-                time.sleep(RETRY_DELAY)
+                time.sleep(self.retry_delay)
 
 def main():
     uploader = SatelliteDataUploader()

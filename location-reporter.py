@@ -18,14 +18,21 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from pathlib import Path
 
-# Configuration
-NOTIFICATION_EMAIL = "johncherbini@hotmail.com"
-SMTP_SERVER = "smtp-mail.outlook.com"
-SMTP_PORT = 587
-REPORT_URL = "https://boatwizards.com/satellite/location"
+# Default configuration
+CONFIG_FILE = "/home/pi/satpi/server-config.json"
 STATUS_FILE = "/tmp/satpi-status.json"
 LAST_REPORT_FILE = "/tmp/last-location-report"
 LOG_FILE = "/var/log/location-reporter.log"
+
+DEFAULT_CONFIG = {
+    "upload_server": {
+        "base_url": "https://boatwizards.com/satellite",
+        "location_endpoint": "/location"
+    },
+    "notification": {
+        "email": "johncherbini@hotmail.com"
+    }
+}
 
 # Email credentials (will be set via environment or config)
 EMAIL_USER = os.environ.get('SATPI_EMAIL_USER', 'satpi.notifications@outlook.com')
@@ -44,12 +51,50 @@ logger = logging.getLogger(__name__)
 
 class LocationReporter:
     def __init__(self):
+        self.config = self.load_config()
         self.device_id = self.get_device_id()
         self.session = requests.Session()
         self.session.headers.update({
             'User-Agent': 'SatPi-LocationReporter/1.0',
             'Content-Type': 'application/json'
         })
+        
+        # Set up URLs from config
+        self.report_url = self.config["upload_server"]["base_url"] + self.config["upload_server"]["location_endpoint"]
+        self.notification_email = self.config["notification"]["email"]
+
+    def load_config(self):
+        """Load configuration from file or environment, with defaults"""
+        config = DEFAULT_CONFIG.copy()
+        
+        # Try to load from config file
+        try:
+            if os.path.exists(CONFIG_FILE):
+                with open(CONFIG_FILE, 'r') as f:
+                    file_config = json.load(f)
+                
+                # Deep merge configuration
+                for section, settings in file_config.items():
+                    if section in config:
+                        config[section].update(settings)
+                    else:
+                        config[section] = settings
+                logger.info(f"Loaded configuration from {CONFIG_FILE}")
+        except Exception as e:
+            logger.warning(f"Could not load config file {CONFIG_FILE}: {e}")
+        
+        # Override with environment variables if set
+        env_base_url = os.environ.get('SATPI_UPLOAD_URL')
+        if env_base_url:
+            config["upload_server"]["base_url"] = env_base_url
+            logger.info(f"Using upload URL from environment: {env_base_url}")
+        
+        env_email = os.environ.get('SATPI_NOTIFICATION_EMAIL')
+        if env_email:
+            config["notification"]["email"] = env_email
+            logger.info(f"Using notification email from environment: {env_email}")
+        
+        return config
 
     def get_device_id(self):
         """Generate unique device ID"""
@@ -235,7 +280,7 @@ class LocationReporter:
     def send_status_to_server(self, report):
         """Send status report to remote server"""
         try:
-            response = self.session.post(REPORT_URL, json=report, timeout=30)
+            response = self.session.post(self.report_url, json=report, timeout=30)
             if response.status_code in [200, 201]:
                 logger.info("Status report sent to server successfully")
                 return True
@@ -306,7 +351,7 @@ Next report will be sent in 24 hours.
         try:
             msg = MIMEMultipart()
             msg['From'] = EMAIL_USER
-            msg['To'] = NOTIFICATION_EMAIL
+            msg['To'] = self.notification_email
             msg['Subject'] = subject
             
             msg.attach(MIMEText(body, 'plain'))
@@ -317,7 +362,7 @@ Next report will be sent in 24 hours.
             server.send_message(msg)
             server.quit()
             
-            logger.info(f"Email notification sent to {NOTIFICATION_EMAIL}")
+            logger.info(f"Email notification sent to {self.notification_email}")
             return True
             
         except Exception as e:
