@@ -42,6 +42,7 @@ systemctl enable data-uploader.service
 systemctl enable location-reporter.service
 systemctl enable dynamic-dns.service
 systemctl enable dynamic-dns.timer
+systemctl enable startup-notification.service
 
 # Configure boot files
 log "Configuring boot files..."
@@ -63,6 +64,7 @@ systemctl start network-monitor.service
 systemctl start data-uploader.service
 systemctl start location-reporter.service
 systemctl start dynamic-dns.timer
+systemctl start startup-notification.service
 
 # Wait for network before starting satellite capture
 sleep 30
@@ -76,3 +78,4 @@ systemctl --no-pager status data-uploader.service
 systemctl --no-pager status satdump-capture.service
 systemctl --no-pager status location-reporter.service
 systemctl --no-pager status dynamic-dns.timer
+systemctl --no-pager status startup-notification.service

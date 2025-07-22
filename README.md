@@ -151,6 +151,7 @@ All components run as systemd services:
 - `network-monitor.service` - Network quality monitoring
 - `satdump-capture.service` - Satellite data capture
 - `data-uploader.service` - Data upload daemon
+- `startup-notification.service` - Sends email when device boots online
 
 ## Troubleshooting
 

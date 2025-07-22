@@ -1,0 +1,21 @@
+[Unit]
+Description=SatPi Startup Notification Service
+After=network-online.target wifi-hunter.service location-reporter.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/home/pi/satpi/startup-notification.sh
+RemainAfterExit=yes
+User=pi
+Group=pi
+StandardOutput=journal
+StandardError=journal
+
+# Environment
+Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+Environment=HOME=/home/pi
+Environment=PYTHONPATH=/usr/local/lib/python3.9/site-packages
+
+[Install]
+WantedBy=multi-user.target

@@ -297,48 +297,155 @@ class LocationReporter:
         local_net = report["local_network"]
         system = report["system_status"]
         
-        subject = f"SatPi Daily Report - {self.device_id}"
+        subject = f"SatPi Daily Report - {self.device_id} - SYSTEM READY"
+        
+        # Get service health for status indicator
+        services = system.get('services', {})
+        all_services_ok = all(status == 'active' for status in services.values())
+        status_indicator = "🟢 OPERATIONAL" if all_services_ok else "🟡 PARTIAL" if any(status == 'active' for status in services.values()) else "🔴 DOWN"
         
         body = f"""
-SatPi Device Status Report
+═══════════════════════════════════════════════════
+           SatPi SATELLITE CAPTURE SYSTEM
+              Device Status & Usage Guide
+═══════════════════════════════════════════════════
+
+DEVICE STATUS: {status_indicator}
 Device ID: {self.device_id}
 Report Time: {report['timestamp']}
 
-📍 LOCATION & NETWORK:
+📍 CURRENT LOCATION & NETWORK:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Public IP: {public_ip.get('ip', 'Unknown')}
 Location: {public_ip.get('city', 'Unknown')}, {public_ip.get('region', 'Unknown')}, {public_ip.get('country', 'Unknown')}
 ISP: {public_ip.get('isp', 'Unknown')}
-Coordinates: {public_ip.get('lat', 'N/A')}, {public_ip.get('lon', 'N/A')}
+GPS Coordinates: {public_ip.get('lat', 'N/A')}, {public_ip.get('lon', 'N/A')}
 
-WiFi Network: {local_net.get('ssid', 'Unknown')}
+Connected WiFi: {local_net.get('ssid', 'Unknown')}
 Signal Strength: {local_net.get('signal_strength', 'Unknown')}
 Local IP: {local_net.get('local_ip', 'Unknown')}
-Gateway: {local_net.get('gateway', 'Unknown')}
+Router Gateway: {local_net.get('gateway', 'Unknown')}
 
-🖥️ SYSTEM STATUS:
+🖥️ SYSTEM HEALTH:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Uptime: {system.get('uptime', 'Unknown')}
 Memory Usage: {system.get('memory_used_percent', 'Unknown')}%
 Disk Usage: {system.get('disk_usage', 'Unknown')}
 CPU Temperature: {system.get('cpu_temperature', 'Unknown')}
 
-📡 SATELLITE DATA:
-Captured Files: {system.get('data_files', 0)}
-Total Data Size: {system.get('data_size_mb', 0)} MB
+📡 SATELLITE CAPTURE STATUS:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Files Captured: {system.get('data_files', 0)}
+Data Storage: {system.get('data_size_mb', 0)} MB
+Upload Server: {self.config["upload_server"]["base_url"]}
 
 ⚙️ SERVICE STATUS:
-WiFi Hunter: {system.get('services', {}).get('wifi-hunter', 'unknown')}
-Satellite Capture: {system.get('services', {}).get('satdump-capture', 'unknown')}
-Data Uploader: {system.get('services', {}).get('data-uploader', 'unknown')}
-Network Monitor: {system.get('services', {}).get('network-monitor', 'unknown')}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+WiFi Hunter: {services.get('wifi-hunter', 'unknown').upper()}
+Satellite Capture: {services.get('satdump-capture', 'unknown').upper()}
+Data Uploader: {services.get('data-uploader', 'unknown').upper()}
+Network Monitor: {services.get('network-monitor', 'unknown').upper()}
 
-🌐 REMOTE ACCESS:
-If the device has a public IP, you may be able to access it at:
-ssh pi@{public_ip.get('ip', 'N/A')}
-(Port 22 must be forwarded/opened on router)
+🔧 HOW TO ACCESS YOUR SATPI DEVICE:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+If you can access your router/network:
+  ssh pi@{local_net.get('local_ip', 'N/A')}
 
----
-This is an automated report from your SatPi satellite capture device.
-Next report will be sent in 24 hours.
+If device has public IP (requires port forwarding):
+  ssh pi@{public_ip.get('ip', 'N/A')}
+  (Configure router to forward port 22 to device)
+
+Default SSH password: raspberry (CHANGE THIS!)
+
+📊 MONITORING COMMANDS:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Once connected via SSH, use these commands:
+
+Service Status:
+  satstatus          # Check all service status
+  satstart           # Start all services
+  satstop            # Stop all services
+
+View Logs:
+  satlog             # Satellite capture logs
+  wifilog            # WiFi connection logs
+  netlog             # Network monitor logs
+  uploadlog          # Data upload logs
+
+Manual Operations:
+  # Test satellite capture (10 seconds)
+  /home/pi/satpi/satdump-capture.sh test
+  
+  # Capture specific satellite (600 seconds)
+  /home/pi/satpi/satdump-capture.sh capture NOAA-18 600
+  
+  # Test upload connection
+  python3 /home/pi/satpi/data-uploader.py test
+  
+  # Test email notifications
+  python3 /home/pi/satpi/location-reporter.py email send
+
+⚙️ CONFIGURATION:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Change Upload Server:
+  sudo /home/pi/satpi/configure-server.sh
+
+Setup Email Notifications:
+  sudo /home/pi/satpi/email-setup.sh
+
+Configure Dynamic DNS:
+  /home/pi/satpi/dynamic-dns.sh setup
+
+Add WiFi Networks:
+  sudo nano /etc/wpa_supplicant/wpa_supplicant.conf
+  sudo systemctl restart wpa_supplicant
+
+🛠️ TROUBLESHOOTING:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+No Satellite Data:
+  • Check RTL-SDR USB connection
+  • Verify antenna is connected and positioned correctly
+  • Check logs: tail -f /var/log/satdump.log
+
+No WiFi Connection:
+  • Check available networks: sudo iwlist scan
+  • Restart WiFi: sudo systemctl restart wifi-hunter
+  • Check logs: tail -f /var/log/wifi-hunter.log
+
+Upload Issues:
+  • Test connection: python3 /home/pi/satpi/data-uploader.py test
+  • Check server config: /home/pi/satpi/configure-server.sh show
+  • Check logs: tail -f /var/log/data-uploader.log
+
+📡 SUPPORTED SATELLITES:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+• NOAA-15 (137.620 MHz) - Weather satellite
+• NOAA-18 (137.912 MHz) - Weather satellite  
+• NOAA-19 (137.100 MHz) - Weather satellite
+• METEOR-M2 (137.100 MHz) - Russian weather satellite
+• ISS (145.800 MHz) - International Space Station
+
+📋 SYSTEM FILES:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Configuration: /home/pi/satpi/server-config.json
+Data Directory: /home/pi/sat-data/
+Log Directory: /var/log/
+Documentation: /home/pi/satpi/README.md
+
+🔒 SECURITY REMINDERS:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+• Change default SSH password: passwd
+• Consider SSH key authentication
+• Update system regularly: sudo apt update && sudo apt upgrade
+• Monitor this email for unexpected location changes
+
+═══════════════════════════════════════════════════
+This automated report confirms your SatPi device is 
+online and operational. Next report in 24 hours.
+
+Questions? Check the documentation at:
+https://github.com/cherbini/satpi
+═══════════════════════════════════════════════════
 """
         return subject, body
 
@@ -385,6 +492,39 @@ Next report will be sent in 24 hours.
             logger.error(f"Error checking last report time: {e}")
             return True
 
+    def should_send_online_notification(self):
+        """Check if we should send an 'online' notification (IP change or first time online)"""
+        online_file = "/tmp/last-online-report"
+        current_ip = self.get_public_ip_info().get('ip')
+        
+        if not current_ip:
+            return False
+            
+        try:
+            if not os.path.exists(online_file):
+                # First time online
+                with open(online_file, 'w') as f:
+                    f.write(f"{current_ip}|{datetime.utcnow().isoformat()}")
+                return True
+                
+            with open(online_file, 'r') as f:
+                last_ip, last_time_str = f.read().strip().split('|')
+                last_time = datetime.fromisoformat(last_time_str)
+            
+            # Send if IP changed or been more than 6 hours since last online notification
+            if (current_ip != last_ip or 
+                (datetime.utcnow() - last_time).total_seconds() > 6 * 3600):
+                
+                with open(online_file, 'w') as f:
+                    f.write(f"{current_ip}|{datetime.utcnow().isoformat()}")
+                return True
+                
+        except Exception as e:
+            logger.error(f"Error checking online status: {e}")
+            return True
+            
+        return False
+
     def mark_report_sent(self):
         """Mark that daily report was sent"""
         try:
@@ -403,13 +543,32 @@ Next report will be sent in 24 hours.
         # Send to server
         self.send_status_to_server(report)
         
-        # Send email if it's time for daily report or forced
-        if force_email or self.should_send_daily_report():
+        # Check if we should send email notifications
+        send_daily = force_email or self.should_send_daily_report()
+        send_online = self.should_send_online_notification()
+        
+        if send_daily or send_online:
             subject, body = self.format_email_report(report)
+            
+            # Modify subject for different notification types
+            if send_online and not send_daily:
+                subject = subject.replace("Daily Report", "ONLINE NOTIFICATION")
+                body = f"""🔔 DEVICE ONLINE ALERT 🔔
+
+Your SatPi device is now available on the internet!
+
+{body}
+
+※ This notification was sent because your device came online 
+or changed IP addresses. Daily reports will continue as scheduled.
+"""
+            
             if self.send_email_notification(subject, body):
-                self.mark_report_sent()
+                if send_daily:
+                    self.mark_report_sent()
+                logger.info("Email notification sent successfully")
         else:
-            logger.info("Daily email not due yet")
+            logger.info("No email notifications due at this time")
         
         logger.info("Location report cycle completed")
 
