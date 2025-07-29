@@ -23,7 +23,7 @@ DEFAULT_CONFIG = {
         "status_endpoint": "/status",
         "api_key": "satpi-client",
         "timeout": 300,
-        "max_file_size_mb": 100,
+        "max_file_size_mb": 2000,
         "retry_attempts": 5,
         "retry_delay_seconds": 300
     },
@@ -31,12 +31,12 @@ DEFAULT_CONFIG = {
         "email": "johncherbini@hotmail.com"
     },
     "system": {
-        "data_directory": "/home/pi/sat-data",
+        "data_directory": "$HOME/sat-data",
         "cleanup_after_upload": True
     }
 }
 
-CONFIG_FILE = "/home/pi/satpi/server-config.json"
+CONFIG_FILE = os.path.expanduser("~/satpi/server-config.json")
 UPLOAD_QUEUE = "/tmp/upload-queue"
 LOG_FILE = "/var/log/data-uploader.log"
 
@@ -68,7 +68,7 @@ class SatelliteDataUploader:
         self.timeout = self.config["upload_server"]["timeout"]
         self.retry_delay = self.config["upload_server"]["retry_delay_seconds"]
         self.max_retries = self.config["upload_server"]["retry_attempts"]
-        self.data_dir = self.config["system"]["data_directory"]
+        self.data_dir = os.path.expanduser(self.config["system"]["data_directory"])
         
     def load_config(self):
         """Load configuration from file or environment, with defaults"""
@@ -170,27 +170,53 @@ class SatelliteDataUploader:
             logger.error(f"Error calculating hash for {filepath}: {e}")
             return None
 
-    def prepare_metadata(self, filepath, satellite_name, capture_time):
+    def prepare_metadata(self, filepath, satellite_name, capture_time, satellite_type="VHF"):
         """Prepare metadata for upload"""
         try:
             stat = os.stat(filepath)
             location = self.get_location_data()
+            frequency = self.get_satellite_frequency(satellite_name)
+            
+            # Determine hardware setup and settings based on satellite type
+            hardware_info = {
+                "type": "raspberry_pi_3",
+                "rtlsdr": True,
+                "software": "satpi-v1.0"
+            }
+            
+            if satellite_type == "GOES" or frequency > 1000:
+                # GOES L-band setup with specialized hardware
+                hardware_info.update({
+                    "antenna": "1690_mhz_directional",
+                    "lna": "sawbird_plus_goes",
+                    "filter": "goes_bandpass_1680_1700mhz",
+                    "frequency_band": "L-band",
+                    "gain_setting": "20dB_reduced_for_lna",
+                    "satellite_type": "geostationary"
+                })
+                sample_rate = 2048000
+            else:
+                # Traditional VHF setup
+                hardware_info.update({
+                    "antenna": "vhf_weather_satellite",
+                    "frequency_band": "VHF",
+                    "gain_setting": "49.6dB_standard",
+                    "satellite_type": "leo_polar_orbiting"
+                })
+                sample_rate = 2048000
             
             metadata = {
                 "device_id": self.device_id,
                 "satellite": satellite_name,
+                "satellite_type": satellite_type,
                 "capture_time": capture_time,
                 "file_size": stat.st_size,
                 "file_hash": self.calculate_file_hash(filepath),
                 "upload_time": datetime.utcnow().isoformat() + "Z",
                 "location": location,
-                "frequency": self.get_satellite_frequency(satellite_name),
-                "sample_rate": 2048000,  # Default sample rate
-                "device_info": {
-                    "type": "raspberry_pi_3",
-                    "rtlsdr": True,
-                    "software": "satpi-v1.0"
-                }
+                "frequency": frequency,
+                "sample_rate": sample_rate,
+                "device_info": hardware_info
             }
             return metadata
         except Exception as e:
@@ -200,11 +226,17 @@ class SatelliteDataUploader:
     def get_satellite_frequency(self, satellite_name):
         """Get frequency for satellite"""
         frequencies = {
+            # Traditional VHF weather satellites
             "NOAA-15": 137.620,
             "NOAA-18": 137.912,
             "NOAA-19": 137.100,
             "METEOR-M2": 137.100,
-            "ISS": 145.800
+            "ISS": 145.800,
+            
+            # GOES geostationary satellites (L-band)
+            "GOES-18": 1686.6,  # Primary West Coast target
+            "GOES-16": 1694.1,  # East Coast
+            "GOES-17": 1686.0,  # Backup West Coast
         }
         return frequencies.get(satellite_name, 137.500)
 
@@ -248,6 +280,14 @@ class SatelliteDataUploader:
 
     def process_upload_queue(self):
         """Process files in upload queue"""
+        # Run cleanup script before processing
+        try:
+            cleanup_script = os.path.expanduser("~/satpi/cleanup-data.sh")
+            if os.path.exists(cleanup_script):
+                subprocess.run([cleanup_script], check=False, capture_output=True)
+        except Exception as e:
+            logger.warning(f"Cleanup script failed: {e}")
+            
         if not os.path.exists(UPLOAD_QUEUE):
             logger.debug("No upload queue found")
             return
@@ -265,17 +305,18 @@ class SatelliteDataUploader:
                     
                 try:
                     parts = line.split('|')
-                    if len(parts) != 3:
+                    if len(parts) < 3:
                         logger.warning(f"Invalid queue entry: {line}")
                         continue
                         
-                    filepath, satellite_name, capture_time = parts
+                    filepath, satellite_name, capture_time = parts[:3]
+                    satellite_type = parts[3] if len(parts) > 3 else "VHF"  # Default to VHF for backward compatibility
                     
                     if not os.path.exists(filepath):
                         logger.warning(f"File not found, skipping: {filepath}")
                         continue
                     
-                    metadata = self.prepare_metadata(filepath, satellite_name, capture_time)
+                    metadata = self.prepare_metadata(filepath, satellite_name, capture_time, satellite_type)
                     if not metadata:
                         logger.error(f"Failed to prepare metadata for {filepath}")
                         remaining_lines.append(line)

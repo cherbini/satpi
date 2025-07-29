@@ -18,7 +18,7 @@ check_internet() {
 
 get_signal_strength() {
     local ssid="$1"
-    iwlist wlan0 scan 2>/dev/null | awk -v ssid="$ssid" '
+    iwlist wlan1 scan 2>/dev/null | awk -v ssid="$ssid" '
         /Cell/ { cell++ }
         /ESSID:/ && $0 ~ ssid { found_cell = cell }
         /Quality=/ && cell == found_cell { 
@@ -29,7 +29,7 @@ get_signal_strength() {
 }
 
 scan_networks() {
-    iwlist wlan0 scan 2>/dev/null | grep -E "ESSID:|Quality=" | \
+    iwlist wlan1 scan 2>/dev/null | grep -E "ESSID:|Quality=" | \
     awk 'BEGIN{ORS=""} /Quality/{quality=$0; getline; print quality " " $0 "\n"}' | \
     grep -v 'ESSID:""' | \
     sort -k2 -nr | \
@@ -66,11 +66,11 @@ attempt_connection() {
     fi
     
     # Start wpa_supplicant
-    sudo wpa_supplicant -B -i wlan0 -c "$temp_conf" -D nl80211
+    sudo wpa_supplicant -B -i wlan1 -c "$temp_conf" -D nl80211
     sleep 5
     
     # Get IP via DHCP
-    sudo dhclient wlan0 -timeout 20
+    sudo dhclient wlan1 -timeout 20
     sleep 5
     
     # Check connection
@@ -117,7 +117,7 @@ main_loop() {
         log "No internet connection. Scanning for networks..."
         
         # Enable WiFi interface
-        sudo ip link set wlan0 up 2>/dev/null
+        sudo ip link set wlan1 up 2>/dev/null
         sleep 2
         
         # Scan for networks

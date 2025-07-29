@@ -14,18 +14,66 @@ A robust, network-enabled satellite data capture system for Raspberry Pi 3 (ARMh
 
 ## Supported Satellites
 
+### VHF Weather Satellites
 - NOAA-15 (137.620 MHz)
 - NOAA-18 (137.912 MHz)  
 - NOAA-19 (137.100 MHz)
 - METEOR-M2 (137.100 MHz)
 - ISS (145.800 MHz)
 
+### GOES Geostationary Satellites (L-band)
+- **GOES-18 West (1686.6 MHz)** - Primary target for West Coast operations
+- GOES-16 East (1694.1 MHz) - East Coast coverage
+- GOES-17 West (1686.0 MHz) - Backup West Coast satellite
+
 ## Hardware Requirements
 
+### Basic Setup
 - Raspberry Pi 3 (ARMhf)
 - RTL-SDR USB dongle
-- Appropriate antenna for satellite reception
 - SD card (16GB minimum recommended)
+
+### Antenna Options
+
+#### VHF Weather Satellites (137-145 MHz)
+- Simple dipole or V-dipole antenna
+- QFH (Quadrifilar Helix) antenna for circular polarization
+
+#### GOES L-band Setup (1690 MHz) - **Recommended for West Coast**
+- **1690 MHz directional antenna** (parabolic or patch)
+- **Sawbird+ GOES LNA** (30dB gain, 1dB noise figure)  
+- **GOES bandpass filter** (1680-1700 MHz)
+- Proper coaxial cable (low loss at L-band)
+
+**Signal Chain:** Antenna → GOES Filter → Sawbird+ LNA → RTL-SDR
+
+## GOES Antenna Aiming
+
+For optimal GOES satellite reception, use the included antenna aiming tool:
+
+```bash
+# Run the interactive GOES aiming tool
+./goes-aiming-tool.sh
+```
+
+### GOES-18 West Coast Pointing
+- **Azimuth:** ~200° (SSW)
+- **Elevation:** ~50° above horizon  
+- **Satellite Position:** 137.2°W longitude
+- **Coverage:** Western US, Pacific Ocean
+
+### Signal Quality Guidelines
+- **Excellent:** > -60dB signal strength
+- **Good:** > -70dB signal strength
+- **Usable:** > -80dB signal strength
+- **Poor:** < -90dB (check antenna pointing)
+
+The aiming tool provides:
+- Real-time signal strength monitoring
+- Visual signal bars and color coding
+- GOES band scanning (1680-1700 MHz)
+- LNA saturation testing
+- Optimal RTL-SDR gain recommendations
 
 ## Quick Start
 
@@ -134,14 +182,24 @@ uploadlog   # Data upload logs
 # Test RTL-SDR
 ./satdump-capture.sh test
 
-# Capture specific satellite
+# List all supported satellites
+./satdump-capture.sh list
+
+# Capture VHF weather satellite
 ./satdump-capture.sh capture NOAA-18 600
+
+# Capture GOES satellite (10 minutes)
+./satdump-capture.sh capture GOES-18 600
+
+# GOES-specific operations
+./satdump-capture.sh goes test                    # Test GOES signal
+./satdump-capture.sh goes continuous GOES-18 3600 # 1-hour continuous capture
 
 # Test upload connection
 python3 data-uploader.py test
 
-# Manual upload
-python3 data-uploader.py upload /path/to/file.raw NOAA-18
+# GOES antenna aiming tool
+./goes-aiming-tool.sh
 ```
 
 ## Services

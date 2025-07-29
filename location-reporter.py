@@ -419,11 +419,17 @@ Upload Issues:
 
 📡 SUPPORTED SATELLITES:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+VHF Weather Satellites:
 • NOAA-15 (137.620 MHz) - Weather satellite
 • NOAA-18 (137.912 MHz) - Weather satellite  
 • NOAA-19 (137.100 MHz) - Weather satellite
 • METEOR-M2 (137.100 MHz) - Russian weather satellite
 • ISS (145.800 MHz) - International Space Station
+
+GOES Geostationary Satellites (L-band):
+• GOES-18 West (1686.6 MHz) - Primary West Coast target
+• GOES-16 East (1694.1 MHz) - East Coast coverage
+• GOES-17 West (1686.0 MHz) - Backup West Coast
 
 📋 SYSTEM FILES:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

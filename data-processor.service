@@ -1,22 +1,22 @@
 [Unit]
-Description=SatPi Data Uploader Service
+Description=SatPi Data Processing Service
 After=network-online.target
 Wants=network-online.target
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/python3 /home/johnc/satpi/data-uploader.py daemon
+ExecStart=/home/johnc/satpi/simple-satellite-uploader.py daemon
 Restart=always
-RestartSec=60
+RestartSec=30
 User=johnc
 Group=johnc
 StandardOutput=journal
 StandardError=journal
+WorkingDirectory=/home/johnc/satpi
 
 # Environment
 Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 Environment=HOME=/home/johnc
-Environment=PYTHONPATH=/usr/local/lib/python3.9/site-packages
 
 [Install]
 WantedBy=multi-user.target

@@ -1,25 +1,25 @@
 [Unit]
-Description=SatPi Satellite Data Capture Service
-After=network-online.target wifi-hunter.service
+Description=SatDump Satellite Capture Service
+After=network-online.target
 Wants=network-online.target
 
 [Service]
 Type=simple
-ExecStart=/home/pi/satpi/satdump-capture.sh auto
+ExecStart=/home/johnc/satpi/satdump-capture.sh auto
 Restart=always
 RestartSec=30
-User=pi
-Group=pi
+User=johnc
+Group=johnc
 StandardOutput=journal
 StandardError=journal
+WorkingDirectory=/home/johnc/satpi
 
 # Environment
 Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-Environment=HOME=/home/pi
+Environment=HOME=/home/johnc
 
-# Resource limits
-MemoryLimit=512M
-CPUQuota=80%
+# Ensure RTL-SDR access
+SupplementaryGroups=dialout plugdev
 
 [Install]
 WantedBy=multi-user.target

@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GOES-18 Image Gallery</title>
+    <style>
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+            margin: 0; 
+            padding: 20px; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .header { 
+            background: rgba(255,255,255,0.95); 
+            padding: 30px; 
+            border-radius: 15px; 
+            margin-bottom: 25px;
+            text-align: center;
+        }
+        .gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .image-card {
+            background: rgba(255,255,255,0.95);
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        }
+        .image-card img {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+        }
+        .image-info {
+            padding: 15px;
+        }
+        .image-title {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .image-time {
+            color: #666;
+            font-size: 14px;
+        }
+        .current-image {
+            border: 3px solid #4CAF50;
+        }
+        .back-link {
+            display: inline-block;
+            margin-bottom: 20px;
+            color: #1976d2;
+            background: #fff;
+            padding: 8px 16px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="satpi-status.html" class="back-link">← Back to SatPi Status</a>
+        <div class="header">
+            <h1>🛰️ GOES-18 Image Gallery</h1>
+            <p>Latest Earth images from the geostationary weather satellite</p>
+        </div>
+        
+        <div class="gallery" id="gallery">
+            <div class="image-card current-image">
+                <img src="images/GOES18_current_earth.jpg" alt="Current GOES-18 Earth View">
+                <div class="image-info">
+                    <div class="image-title">Current Earth View</div>
+                    <div class="image-time">Latest processed image (updates every 5 minutes)</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function loadGallery() {
+            const gallery = document.getElementById('gallery');
+            
+            // This shows the current image
+            // As more timestamped images are processed, they'll be kept on the server
+            // and could be displayed here with additional JavaScript/PHP integration
+        }
+        
+        // Load gallery on page load
+        loadGallery();
+        
+        // Auto-refresh every 5 minutes
+        setInterval(() => {
+            // Force reload of current image
+            const img = document.querySelector('#gallery img');
+            if (img) {
+                img.src = img.src.split('?')[0] + '?' + new Date().getTime();
+            }
+        }, 300000);
+    </script>
+</body>
+</html>

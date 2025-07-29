@@ -40,13 +40,13 @@ check_connection_quality() {
 monitor_bandwidth() {
     local rx1 tx1 rx2 tx2
     
-    rx1=$(cat /sys/class/net/wlan0/statistics/rx_bytes 2>/dev/null || echo 0)
-    tx1=$(cat /sys/class/net/wlan0/statistics/tx_bytes 2>/dev/null || echo 0)
+    rx1=$(cat /sys/class/net/wlan1/statistics/rx_bytes 2>/dev/null || echo 0)
+    tx1=$(cat /sys/class/net/wlan1/statistics/tx_bytes 2>/dev/null || echo 0)
     
     sleep 10
     
-    rx2=$(cat /sys/class/net/wlan0/statistics/rx_bytes 2>/dev/null || echo 0)
-    tx2=$(cat /sys/class/net/wlan0/statistics/tx_bytes 2>/dev/null || echo 0)
+    rx2=$(cat /sys/class/net/wlan1/statistics/rx_bytes 2>/dev/null || echo 0)
+    tx2=$(cat /sys/class/net/wlan1/statistics/tx_bytes 2>/dev/null || echo 0)
     
     local rx_rate=$(((rx2 - rx1) / 10))
     local tx_rate=$(((tx2 - tx1) / 10))
